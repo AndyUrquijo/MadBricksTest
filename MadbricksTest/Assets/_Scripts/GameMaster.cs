@@ -14,6 +14,7 @@ public class GameMaster : MonoBehaviour
     [SerializeField] TMPro.TMP_InputField DataInput = null;
     [SerializeField] Button LoginButton = null;
     [SerializeField] Button SaveButton = null;
+    [SerializeField] TMPro.TextMeshProUGUI Caption = null;
 
     string PlayfabId = null;
 
@@ -22,12 +23,13 @@ public class GameMaster : MonoBehaviour
         PlayFabSettings.TitleId = "39114";
         DataInput.interactable = false;
         SaveButton.interactable = false;
+        SetCaption("Welcome!",2);
     }
 
     public void Login()
     {
         ActivateElements(false);
-
+        SetCaption("Logging in...");
         var user = LoginInput.text;
         var request = new LoginWithCustomIDRequest { CustomId = user, CreateAccount = true };
         PlayFabClientAPI.LoginWithCustomID(request,
@@ -42,6 +44,7 @@ public class GameMaster : MonoBehaviour
 
     void Load()
     {
+        SetCaption("Loading data...");
         var request = new GetUserDataRequest();
         PlayFabClientAPI.GetUserData(request,
             (result) =>
@@ -52,6 +55,7 @@ public class GameMaster : MonoBehaviour
                 else
                     DataInput.text = "";
                 ActivateElements(true);
+                SetCaption("Loaded!",1);
             },
             OnError);
     }
@@ -59,6 +63,7 @@ public class GameMaster : MonoBehaviour
     public void Save()
     {
         ActivateElements(false);
+        SetCaption("Saving...");
 
         var request = new UpdateUserDataRequest();
 
@@ -70,6 +75,7 @@ public class GameMaster : MonoBehaviour
             {
                 Debug.Log("Data saved");
                 ActivateElements(true);
+                SetCaption("Saved!", 2);
             },
             OnError);
     }
@@ -77,9 +83,13 @@ public class GameMaster : MonoBehaviour
     void OnError(PlayFabError error)
     {
         Debug.Log("Playfab Error");
-        Debug.LogWarning(error.GenerateErrorReport());
+        Debug.LogWarning(error.ErrorMessage);
         ActivateElements(true);
+        SetCaption(error.ErrorMessage, 2);
     }
+
+
+    #region Helpers
 
     void ActivateElements(bool active)
     {
@@ -89,4 +99,23 @@ public class GameMaster : MonoBehaviour
         DataInput.interactable = active && PlayfabId != null;
         SaveButton.interactable = active && PlayfabId != null;
     }
+
+    void SetCaption(string text, float time = 0)
+    {
+        Caption.text = text;
+
+        if (_TurnOffCaptionCoroutine != null)
+            StopCoroutine(_TurnOffCaptionCoroutine);
+
+        if (time>0)
+            _TurnOffCaptionCoroutine = StartCoroutine(_TurnOffCaption(time));
+    }
+    Coroutine _TurnOffCaptionCoroutine;
+    IEnumerator _TurnOffCaption(float time)
+    {
+        yield return new WaitForSeconds(time);
+        Caption.text = "";
+    }
+
+    #endregion
 }
